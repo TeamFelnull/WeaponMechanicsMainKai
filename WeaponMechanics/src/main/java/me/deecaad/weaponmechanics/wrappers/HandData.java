@@ -13,7 +13,9 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class HandData {
@@ -23,7 +25,7 @@ public class HandData {
 
     private int fullAutoTask;
     private int burstTask;
-    private long lastShotTime;
+    private final Map<String,Long> lastShotTimes=new HashMap<>();
     private long lastScopeTime;
     private long lastEquipTime;
     private double spreadChange;
@@ -125,12 +127,12 @@ public class HandData {
         this.burstTask = burstTask;
     }
 
-    public void setLastShotTime(long lastShotTime) {
-        this.lastShotTime = lastShotTime;
+    public void setLastShotTime(String weaponTitle,long lastShotTime) {
+        this.lastShotTimes.put(weaponTitle,lastShotTime);
     }
 
-    public long getLastShotTime() {
-        return lastShotTime;
+    public long getLastShotTime(String weaponTitle) {
+        return lastShotTimes.getOrDefault(weaponTitle,0L);
     }
 
     public long getLastScopeTime() {

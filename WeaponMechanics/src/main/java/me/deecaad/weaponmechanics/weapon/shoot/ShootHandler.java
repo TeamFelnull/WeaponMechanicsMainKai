@@ -239,8 +239,12 @@ public class ShootHandler implements IValidator, TriggerListener {
 
         // Only check if selective fire doesn't have auto selected and it isn't melee
         if (selectiveFireState != SelectiveFireState.AUTO && !isMelee) {
+
+
             int delayBetweenShots = config.getInt(weaponTitle + ".Shoot.Delay_Between_Shots");
-            if (delayBetweenShots != 0 && !NumberUtil.hasMillisPassed(handData.getLastShotTime(), delayBetweenShots))
+
+
+            if (delayBetweenShots != 0 && !NumberUtil.hasMillisPassed(handData.getLastShotTime(weaponTitle), delayBetweenShots))
                 return false;
         }
 
@@ -654,7 +658,7 @@ public class ShootHandler implements IValidator, TriggerListener {
                 Bukkit.getPluginManager().callEvent(event);
 
                 HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
-                handData.setLastShotTime(System.currentTimeMillis());
+                handData.setLastShotTime(weaponTitle,System.currentTimeMillis());
             }
 
             return;
@@ -707,7 +711,7 @@ public class ShootHandler implements IValidator, TriggerListener {
         // Update this AFTER shot (e.g. spread reset time won't work properly otherwise
         if (!isMelee) {
             HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
-            handData.setLastShotTime(System.currentTimeMillis());
+            handData.setLastShotTime(weaponTitle,System.currentTimeMillis());
         }
     }
 

@@ -43,7 +43,7 @@ public class ChangingSpread implements Serializer<ChangingSpread> {
         HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
 
         // Reset if required
-        if (NumberUtil.hasMillisPassed(handData.getLastShotTime(), resetTime)) handData.setSpreadChange(startingAmount);
+        if (NumberUtil.hasMillisPassed(handData.getLastShotTime(handData.getCurrentWeaponTitle()), resetTime)) handData.setSpreadChange(startingAmount);
 
         // Check bounds of spread change
         boolean didReset = false;
