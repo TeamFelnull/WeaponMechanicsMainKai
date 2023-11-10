@@ -27,8 +27,8 @@ import me.deecaad.weaponmechanics.weapon.explode.shapes.*;
 import me.deecaad.weaponmechanics.weapon.info.InfoHandler;
 import me.deecaad.weaponmechanics.weapon.projectile.weaponprojectile.Projectile;
 import me.deecaad.weaponmechanics.weapon.projectile.weaponprojectile.ProjectileSettings;
-import me.deecaad.weaponmechanics.weapon.reload.ammo.AmmoTypes;
-import me.deecaad.weaponmechanics.weapon.reload.ammo.IAmmoType;
+import me.deecaad.weaponmechanics.weapon.reload.ammo.AmmoConfig;
+import me.deecaad.weaponmechanics.weapon.reload.ammo.AmmoRegistry;
 import me.deecaad.weaponmechanics.weapon.shoot.CustomDurability;
 import me.deecaad.weaponmechanics.weapon.shoot.recoil.Recoil;
 import me.deecaad.weaponmechanics.wrappers.PlayerWrapper;
@@ -78,11 +78,7 @@ public class WeaponMechanicsCommand {
     };
 
     public static Function<CommandData, Tooltip[]> AMMO_SUGGESTIONS = (data) -> {
-        String weaponTitle = (String) data.previousArguments()[data.previousArguments().length - 1];
-        Configuration config = WeaponMechanics.getConfigurations();
-
-        AmmoTypes types = config.getObject(weaponTitle + ".Reload.Ammo.Ammo_Types", AmmoTypes.class);
-        return types == null ? null : types.getAmmoTypes().stream().map(IAmmoType::getAmmoName).map(Tooltip::of).toArray(Tooltip[]::new);
+        return AmmoRegistry.AMMO_REGISTRY.getOptions().stream().map(Tooltip::of).toArray(Tooltip[]::new);
     };
 
     public static Function<CommandData, Tooltip[]> REPAIR_KIT_SUGGESTIONS = (data) -> {
@@ -163,12 +159,11 @@ public class WeaponMechanicsCommand {
                         .withPermission("weaponmechanics.commands.giveammo")
                         .withDescription("Gives ammo of a certain type to a player")
                         .withArgument(new Argument<>("player", new PlayerArgumentType()).withDesc("Who recieves the ammo"))
-                        .withArgument(new Argument<>("weapon", new StringArgumentType()).withDesc("Which weapon the ammo is for").replace(WEAPON_SUGGESTIONS))
                         .withArgument(new Argument<>("ammo", new StringArgumentType()).withDesc("Which ammo to give").replace(AMMO_SUGGESTIONS))
                         .withArgument(new Argument<>("magazine", new BooleanArgumentType(), false).withDesc("Whether to give the magazine or bullet"))
                         .withArgument(new Argument<>("amount", new IntegerArgumentType(), 64).withDesc("How much ammo to give").replace(ITEM_COUNT))
                         .executes(CommandExecutor.any((sender, args) -> {
-                            giveAmmo(sender, (Player) args[0], (String) args[1], (String) args[2], (boolean) args[3], (int) args[4]);
+                            giveAmmo(sender, (Player) args[0], (String) args[1], (boolean) args[2], (int) args[3]);
                         })))
 
                 .withSubcommand(new CommandBuilder("info")
@@ -515,23 +510,20 @@ public class WeaponMechanicsCommand {
             return;
         }
 
-        String path = title + ".Reload.Ammo.Ammo_Types";
-        Configuration config = WeaponMechanics.getConfigurations();
-        if (!config.containsKey(path)) {
+        AmmoConfig ammo = WeaponMechanics.getConfigurations().getObject(title + ".Reload.Ammo", AmmoConfig.class);
+        if (ammo == null) {
             sender.sendMessage(RED + title + " does not use ammo");
             return;
         }
 
-        AmmoTypes ammo = config.getObject(path, AmmoTypes.class);
         ammo.giveAmmo(sender.getInventory().getItemInMainHand(), WeaponMechanics.getPlayerWrapper(sender), amount, 64);
-
         sender.sendMessage(GREEN + "Sent ammo");
     }
 
-    public static void giveAmmo(CommandSender sender, Player player, String weaponTitle, String ammoName, boolean magazine, int amount) {
+    public static void giveAmmo(CommandSender sender, Player player, String ammoName, boolean magazine, int amount) {
         ItemStack item;
         try {
-            item = WeaponMechanicsAPI.getAmmoItem(weaponTitle, ammoName, magazine);
+            item = WeaponMechanicsAPI.generateAmmo(ammoName, magazine);
         } catch (Throwable ex) {
             sender.sendMessage(RED + ex.getMessage());
             return;

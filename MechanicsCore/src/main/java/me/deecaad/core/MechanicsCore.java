@@ -5,14 +5,18 @@ import me.deecaad.core.events.triggers.EquipListener;
 import me.deecaad.core.file.*;
 import me.deecaad.core.file.serializers.ItemSerializer;
 import me.deecaad.core.listeners.ItemCraftListener;
-import me.deecaad.core.mechanics.PlayerEffectMechanicList;
+import me.deecaad.core.listeners.MechanicsCastListener;
+import me.deecaad.core.mechanics.Mechanics;
+import me.deecaad.core.mechanics.conditions.Condition;
+import me.deecaad.core.mechanics.conditions.GeyserCondition;
 import me.deecaad.core.mechanics.conditions.MythicMobsEntityCondition;
 import me.deecaad.core.mechanics.conditions.MythicMobsFactionCondition;
 import me.deecaad.core.mechanics.defaultmechanics.Mechanic;
-import me.deecaad.core.mechanics.Mechanics;
-import me.deecaad.core.mechanics.conditions.Condition;
+import me.deecaad.core.mechanics.defaultmechanics.MythicSkillMechanic;
+import me.deecaad.core.mechanics.defaultmechanics.SculkBloomMechanic;
+import me.deecaad.core.mechanics.defaultmechanics.SculkShriekMechanic;
 import me.deecaad.core.mechanics.targeters.Targeter;
-import me.deecaad.core.placeholder.PlaceholderAPI;
+import me.deecaad.core.placeholder.PlaceholderHandler;
 import me.deecaad.core.utils.Debugger;
 import me.deecaad.core.utils.FileUtil;
 import me.deecaad.core.utils.LogLevel;
@@ -57,21 +61,40 @@ public class MechanicsCore extends JavaPlugin {
                 JarSearcher searcher = new JarSearcher(new JarFile(getFile()));
 
                 searcher.findAllSubclasses(Mechanic.class, getClassLoader(), true)
-                        .stream().map(ReflectionUtil::newInstance).filter(mechanic -> !(mechanic instanceof PlayerEffectMechanicList)).forEach(Mechanics.MECHANICS::add);
+                        .stream().map(ReflectionUtil::newInstance).forEach(Mechanics.MECHANICS::add);
                 searcher.findAllSubclasses(Targeter.class, getClassLoader(), true)
                         .stream().map(ReflectionUtil::newInstance).forEach(Mechanics.TARGETERS::add);
-                searcher.findAllSubclasses(Condition.class, getClassLoader(), true, MythicMobsEntityCondition.class, MythicMobsFactionCondition.class)
+                searcher.findAllSubclasses(Condition.class, getClassLoader(), true)
                         .stream().map(ReflectionUtil::newInstance).forEach(Mechanics.CONDITIONS::add);
 
-                // Add the MythicMobs conditions ONLY IF mythicmobs is present to avoid error.
+                // Sculk methods were added in 1.20.1
+                if (ReflectionUtil.getMCVersion() >= 20) {
+                    Mechanics.MECHANICS.add(new SculkShriekMechanic());
+                    Mechanics.MECHANICS.add(new SculkBloomMechanic());
+                }
+
                 try {
+                    // Add the MythicMobs conditions ONLY IF mythicmobs is present to avoid errors
                     if (getServer().getPluginManager().getPlugin("MythicMobs") != null) {
+                        Mechanics.MECHANICS.add(new MythicSkillMechanic());
                         Mechanics.CONDITIONS.add(new MythicMobsEntityCondition());
                         Mechanics.CONDITIONS.add(new MythicMobsFactionCondition());
                     }
                 } catch (Throwable ex) {
                     debug.warn("Cannot hook into MythicMobs... MythicMobs might be outdated");
                 }
+
+                try {
+                    if (getServer().getPluginManager().isPluginEnabled("Geyser-Spigot")) {
+                        Mechanics.CONDITIONS.add(new GeyserCondition());
+                    }
+                } catch (Throwable ex) {
+                    debug.warn("Cannot hook into Geyser... Geyser might be outdated");
+                }
+
+                // Placeholders
+                searcher.findAllSubclasses(PlaceholderHandler.class, getClassLoader(), true)
+                        .stream().map(ReflectionUtil::newInstance).forEach(PlaceholderHandler.REGISTRY::add);
 
             } catch (IOException ex) {
                 debug.log(LogLevel.ERROR, "Error while searching Jar", ex);
@@ -92,6 +115,7 @@ public class MechanicsCore extends JavaPlugin {
             Bukkit.getPluginManager().registerEvents(EquipListener.SINGLETON, this);
         }
         Bukkit.getPluginManager().registerEvents(new ItemCraftListener(), this);
+        Bukkit.getPluginManager().registerEvents(new MechanicsCastListener(), this);
 
         // Adventure Chat API
         adventure = BukkitAudiences.create(this);
@@ -123,7 +147,6 @@ public class MechanicsCore extends JavaPlugin {
     public void onDisable() {
         HandlerList.unregisterAll(this);
         Bukkit.getServer().getScheduler().cancelTasks(this);
-        PlaceholderAPI.onDisable();
         debug = null;
         adventure.close();
         adventure = null;

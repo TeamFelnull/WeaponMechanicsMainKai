@@ -1,11 +1,13 @@
 package me.deecaad.weaponmechanics.weapon.shoot;
 
+import me.deecaad.core.MechanicsCore;
 import me.deecaad.core.compatibility.CompatibilityAPI;
 import me.deecaad.core.compatibility.worldguard.WorldGuardCompatibility;
 import me.deecaad.core.file.*;
 import me.deecaad.core.mechanics.CastData;
 import me.deecaad.core.mechanics.Mechanics;
-import me.deecaad.core.placeholder.PlaceholderAPI;
+import me.deecaad.core.placeholder.PlaceholderData;
+import me.deecaad.core.placeholder.PlaceholderMessage;
 import me.deecaad.core.utils.NumberUtil;
 import me.deecaad.core.utils.StringUtil;
 import me.deecaad.weaponmechanics.WeaponMechanics;
@@ -27,6 +29,7 @@ import me.deecaad.weaponmechanics.weapon.weaponevents.*;
 import me.deecaad.weaponmechanics.wrappers.EntityWrapper;
 import me.deecaad.weaponmechanics.wrappers.HandData;
 import me.deecaad.weaponmechanics.wrappers.PlayerWrapper;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -41,7 +44,7 @@ import org.bukkit.util.Vector;
 import org.vivecraft.VSE;
 import org.vivecraft.VivePlayer;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -166,8 +169,9 @@ public class ShootHandler implements IValidator, TriggerListener {
         boolean hasPermission = weaponHandler.getInfoHandler().hasPermission(entityWrapper.getEntity(), weaponTitle);
         if (!hasPermission) {
             if (shooter.getType() == EntityType.PLAYER) {
-                String permissionMessage = getBasicConfigurations().getString("Messages.Permissions.Use_Weapon", ChatColor.RED + "You do not have permission to use " + weaponTitle);
-                shooter.sendMessage(PlaceholderAPI.applyPlaceholders(permissionMessage, (Player) shooter, weaponStack, weaponTitle, slot));
+                PlaceholderMessage permissionMessage = new PlaceholderMessage(getBasicConfigurations().getString("Messages.Permissions.Use_Weapon", ChatColor.RED + "You do not have permission to use " + weaponTitle));
+                Component component = permissionMessage.replaceAndDeserialize(PlaceholderData.of((Player) shooter, weaponStack, weaponTitle, slot));
+                MechanicsCore.getPlugin().adventure.sender(shooter).sendMessage(component);
             }
             return false;
         }
@@ -619,6 +623,7 @@ public class ShootHandler implements IValidator, TriggerListener {
     public void shoot(EntityWrapper entityWrapper, String weaponTitle, ItemStack weaponStack, Location shootLocation, boolean mainHand, boolean updateSpreadChange, boolean isMelee) {
         Configuration config = getConfigurations();
         LivingEntity livingEntity = entityWrapper.getEntity();
+        EquipmentSlot slot = mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
 
         Mechanics shootMechanics = config.getObject(weaponTitle + ".Shoot.Mechanics", Mechanics.class);
         boolean resetFallDistance = config.getBool(weaponTitle + ".Shoot.Reset_Fall_Distance");
@@ -626,7 +631,7 @@ public class ShootHandler implements IValidator, TriggerListener {
         double projectileSpeed = config.getDouble(weaponTitle + ".Shoot.Projectile_Speed");
         int projectileAmount = config.getInt(weaponTitle + ".Shoot.Projectiles_Per_Shot");
 
-        PrepareWeaponShootEvent prepareEvent = new PrepareWeaponShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND, shootMechanics, resetFallDistance, projectile, projectileSpeed, projectileAmount);
+        PrepareWeaponShootEvent prepareEvent = new PrepareWeaponShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), slot, shootMechanics, resetFallDistance, projectile, projectileSpeed, projectileAmount);
         Bukkit.getPluginManager().callEvent(prepareEvent);
         if (prepareEvent.isCancelled())
             return;
@@ -645,7 +650,7 @@ public class ShootHandler implements IValidator, TriggerListener {
 
             WeaponInfoDisplay weaponInfoDisplay = getConfigurations().getObject(weaponTitle + ".Info.Weapon_Info_Display", WeaponInfoDisplay.class);
             if (weaponInfoDisplay != null)
-                weaponInfoDisplay.send(playerWrapper, mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND);
+                weaponInfoDisplay.send(playerWrapper, slot);
         }
 
         if (projectile == null || isMelee) {
@@ -654,11 +659,16 @@ public class ShootHandler implements IValidator, TriggerListener {
 
             // Update this AFTER shot (e.g. spread reset time won't work properly otherwise
             if (!isMelee) {
-                WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND);
+                WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), slot, false);
                 Bukkit.getPluginManager().callEvent(event);
 
                 HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
+<<<<<<< HEAD
                 handData.setLastShotTime(weaponTitle,System.currentTimeMillis());
+=======
+                handData.setLastShotTime(System.currentTimeMillis());
+                handData.setLastWeaponShot(weaponTitle, weaponStack);
+>>>>>>> master
             }
 
             return;
@@ -686,7 +696,7 @@ public class ShootHandler implements IValidator, TriggerListener {
             }
 
             // Only create bullet first if WeaponShootEvent changes
-            WeaponProjectile bullet = prepareEvent.getProjectile().create(livingEntity, perProjectileShootLocation, motion, weaponStack, weaponTitle, mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND);
+            WeaponProjectile bullet = prepareEvent.getProjectile().create(livingEntity, perProjectileShootLocation, motion, weaponStack, weaponTitle, slot);
 
             WeaponShootEvent shootEvent = new WeaponShootEvent(bullet);
             Bukkit.getPluginManager().callEvent(shootEvent);
@@ -705,14 +715,28 @@ public class ShootHandler implements IValidator, TriggerListener {
                 entityWrapper.getHandData(mainHand).cancelTasks();
         }
 
-        WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), mainHand ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND);
+        boolean unscopeAfterShot = config.getBool(weaponTitle + ".Scope.Unscope_After_Shot");
+        WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, weaponStack, entityWrapper.getEntity(), slot, unscopeAfterShot);
         Bukkit.getPluginManager().callEvent(event);
 
+<<<<<<< HEAD
         // Update this AFTER shot (e.g. spread reset time won't work properly otherwise
         if (!isMelee) {
             HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
             handData.setLastShotTime(weaponTitle,System.currentTimeMillis());
+=======
+        // Unscope after shoot for #73
+        // Must unscope AFTER shooting so spread works properly
+        if (event.isUnscopeAfterShot()) {
+            entityWrapper.getHandData(mainHand).getZoomData().ifZoomingForceZoomOut();
+            weaponHandler.getSkinHandler().tryUse(entityWrapper, weaponTitle, weaponStack, slot);
+>>>>>>> master
         }
+
+        // Update this AFTER shot (e.g. spread reset time won't work properly otherwise
+        HandData handData = mainHand ? entityWrapper.getMainHandData() : entityWrapper.getOffHandData();
+        handData.setLastShotTime(System.currentTimeMillis());
+        handData.setLastWeaponShot(weaponTitle, weaponStack);
     }
 
     /**
@@ -747,7 +771,7 @@ public class ShootHandler implements IValidator, TriggerListener {
             projectile.shoot(bullet, perProjectileShootLocation);
         }
 
-        WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, null, livingEntity, null);
+        WeaponPostShootEvent event = new WeaponPostShootEvent(weaponTitle, null, livingEntity, null, false);
         Bukkit.getPluginManager().callEvent(event);
     }
 

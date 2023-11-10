@@ -1,16 +1,19 @@
 package me.deecaad.weaponmechanics.weapon.reload;
 
+import me.deecaad.core.MechanicsCore;
 import me.deecaad.core.file.*;
 import me.deecaad.core.mechanics.CastData;
 import me.deecaad.core.mechanics.Mechanics;
-import me.deecaad.core.placeholder.PlaceholderAPI;
+import me.deecaad.core.placeholder.PlaceholderData;
+import me.deecaad.core.placeholder.PlaceholderMessage;
+import me.deecaad.core.utils.StringUtil;
 import me.deecaad.weaponmechanics.utils.CustomTag;
 import me.deecaad.weaponmechanics.weapon.WeaponHandler;
 import me.deecaad.weaponmechanics.weapon.firearm.FirearmAction;
 import me.deecaad.weaponmechanics.weapon.firearm.FirearmState;
 import me.deecaad.weaponmechanics.weapon.firearm.FirearmType;
 import me.deecaad.weaponmechanics.weapon.info.WeaponInfoDisplay;
-import me.deecaad.weaponmechanics.weapon.reload.ammo.AmmoTypes;
+import me.deecaad.weaponmechanics.weapon.reload.ammo.AmmoConfig;
 import me.deecaad.weaponmechanics.weapon.trigger.Trigger;
 import me.deecaad.weaponmechanics.weapon.trigger.TriggerListener;
 import me.deecaad.weaponmechanics.weapon.trigger.TriggerType;
@@ -20,8 +23,8 @@ import me.deecaad.weaponmechanics.weapon.weaponevents.WeaponReloadEvent;
 import me.deecaad.weaponmechanics.wrappers.EntityWrapper;
 import me.deecaad.weaponmechanics.wrappers.HandData;
 import me.deecaad.weaponmechanics.wrappers.PlayerWrapper;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -108,9 +111,11 @@ public class ReloadHandler implements IValidator, TriggerListener {
         // Handle permissions
         boolean hasPermission = weaponHandler.getInfoHandler().hasPermission(entityWrapper.getEntity(), weaponTitle);
         if (!hasPermission) {
-            if (shooter.getType() == EntityType.PLAYER) {
-                String permissionMessage = getBasicConfigurations().getString("Messages.Permissions.Use_Weapon", ChatColor.RED + "You do not have permission to use " + weaponTitle);
-                shooter.sendMessage(PlaceholderAPI.applyPlaceholders(permissionMessage, (Player) shooter, weaponStack, weaponTitle, slot));
+            if (shooter instanceof Player player) {
+                String permissionMessage = getBasicConfigurations().getString("Messages.Permissions.Use_Weapon", "<red>You do not have permission to use " + weaponTitle);
+                PlaceholderMessage message = new PlaceholderMessage(StringUtil.colorAdventure(permissionMessage));
+                Component component = message.replaceAndDeserialize(PlaceholderData.of(player, weaponStack, weaponTitle, slot));
+                MechanicsCore.getPlugin().adventure.player(player).sendMessage(component);
             }
             return false;
         }
@@ -204,14 +209,13 @@ public class ReloadHandler implements IValidator, TriggerListener {
             return false;
         }
 
-        AmmoTypes ammoTypes = playerWrapper != null ? config.getObject(weaponTitle + ".Reload.Ammo.Ammo_Types", AmmoTypes.class) : null;
-        if (ammoTypes != null && !ammoTypes.hasAmmo(weaponTitle, weaponStack, playerWrapper)) {
-            Mechanics outOfAmmoMechanics = getConfigurations().getObject(weaponTitle + ".Reload.Ammo.Out_Of_Ammo", Mechanics.class);
+        AmmoConfig ammo = playerWrapper != null ? config.getObject(weaponTitle + ".Reload.Ammo", AmmoConfig.class) : null;
+        if (ammo != null && !ammo.hasAmmo(weaponTitle, weaponStack, playerWrapper)) {
 
             // Creative mode bypass... #176
             if (playerWrapper.getPlayer().getGameMode() != GameMode.CREATIVE || !getBasicConfigurations().getBool("Creative_Mode_Bypass_Ammo")) {
-                if (outOfAmmoMechanics != null)
-                    outOfAmmoMechanics.use(new CastData(shooter, weaponTitle, weaponStack));
+                if (ammo.getOutOfAmmoMechanics() != null)
+                    ammo.getOutOfAmmoMechanics().use(new CastData(shooter, weaponTitle, weaponStack));
                 return false;
             }
 
@@ -254,15 +258,14 @@ public class ReloadHandler implements IValidator, TriggerListener {
                 // Here creating this again since this may change if there isn't enough ammo...
                 int ammoToAdd = finalAmmoToAdd + unloadedAmount;
 
-                if (ammoTypes != null) {
+                if (ammo != null) {
 
-                    int removedAmount = ammoTypes.removeAmmo(taskReference, playerWrapper, ammoToAdd, magazineSize);
+                    int removedAmount = ammo.removeAmmo(taskReference, playerWrapper, ammoToAdd, magazineSize);
 
                     // Just check if for some reason ammo disappeared from entity before reaching reload "complete" state
                     if (removedAmount <= 0) {
-                        Mechanics outOfAmmoMechanics = getConfigurations().getObject(weaponTitle + ".Reload.Ammo.Out_Of_Ammo", Mechanics.class);
-                        if (outOfAmmoMechanics != null)
-                            outOfAmmoMechanics.use(new CastData(shooter, weaponTitle, taskReference));
+                        if (ammo.getOutOfAmmoMechanics() != null)
+                            ammo.getOutOfAmmoMechanics().use(new CastData(shooter, weaponTitle, taskReference));
 
                         // Remove next task as reload can't be finished
                         setNextTask(null);
@@ -306,7 +309,7 @@ public class ReloadHandler implements IValidator, TriggerListener {
                 if (unloadAmmoOnReload && ammoLeft > 0) {
                     // unload weapon and give ammo back to given entity
 
-                    if (ammoTypes != null) ammoTypes.giveAmmo(weaponStack, playerWrapper, ammoLeft, magazineSize);
+                    if (ammo != null) ammo.giveAmmo(weaponStack, playerWrapper, ammoLeft, magazineSize);
                     unloadedAmount = ammoLeft;
 
                     handleWeaponStackAmount(entityWrapper, weaponStack);
@@ -571,10 +574,10 @@ public class ReloadHandler implements IValidator, TriggerListener {
 
         int magazineSize = data.of("Magazine_Size").assertExists().assertPositive().getInt();
         int reloadDuration = data.of("Reload_Duration").assertExists().assertPositive().getInt();
-        int ammoPerReload = data.of("Ammo_Per_Reload").assertPositive().getInt(-99);
+        int ammoPerReload = data.of("Ammo_Per_Reload").assertPositive().getInt(-1);
 
         boolean unloadAmmoOnReload = data.of("Unload_Ammo_On_Reload").getBool(false);
-        if (unloadAmmoOnReload && ammoPerReload != -99) {
+        if (unloadAmmoOnReload && ammoPerReload != -1) {
             // Using ammo per reload and unload ammo on reload at same time is considered as error
             throw data.exception(null, "Cannot use 'Ammo_Per_Reload' and 'Unload_Ammo_On_Reload' at the same time");
         }
@@ -583,6 +586,20 @@ public class ReloadHandler implements IValidator, TriggerListener {
         if (shootDelayAfterReload != 0) {
             // Convert to millis
             configuration.set(data.key + ".Shoot_Delay_After_Reload", shootDelayAfterReload * 50);
+        }
+
+        // Warning that the user is using the old system
+        if (data.has("Ammo.Ammo_Types")) {
+            throw data.exception("Ammo.Ammo_Types", "You are using the old Ammo_Types format",
+                    "In WeaponMechanics 3.0.0 we recoded Ammo for simplified config and improved features",
+                    "https://cjcrafter.gitbook.io/weaponmechanics/weapon-modules/reload/ammo");
+        }
+
+        // Easy mistake to make... Should be Ammo.Ammos
+        if (data.has("Ammos")) {
+            throw data.exception("Ammos", "Oops! You put 'Ammos' directly in the reload section",
+                    "You should add an 'Ammo' section first, and put the 'Ammos' in there!",
+                    "https://cjcrafter.gitbook.io/weaponmechanics/weapon-modules/reload/ammo");
         }
     }
 }

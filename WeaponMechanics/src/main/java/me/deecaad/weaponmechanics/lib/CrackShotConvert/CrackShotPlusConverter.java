@@ -180,7 +180,7 @@ public class CrackShotPlusConverter {
 
     private static class FireworkConvert implements Converter {
 
-        private boolean isTarget;
+        private final boolean isTarget;
 
         public FireworkConvert() {
             this.isTarget = false;
@@ -212,7 +212,7 @@ public class CrackShotPlusConverter {
 
     private static class CustomSoundConvert implements Converter {
 
-        private boolean isTarget;
+        private final boolean isTarget;
 
         public CustomSoundConvert() {
             this.isTarget = false;
@@ -263,11 +263,11 @@ public class CrackShotPlusConverter {
             String value = CSPapi.getString(from);
             if (value == null) return;
 
-            value = value.replaceAll("#DAMAGED#", "%victim%")
-                    .replaceAll("#PLAYER#", "%shooter%")
-                    .replaceAll("#WEAPON#", "%weapon-title%")
-                    .replaceAll("#KILLER#", "%shooter%")
-                    .replaceAll("#KILLED#", "%victim%");
+            value = value.replaceAll("#DAMAGED#", "<target_name>")
+                    .replaceAll("#PLAYER#", "<source_name>")
+                    .replaceAll("#WEAPON#", "<weapon_title>")
+                    .replaceAll("#KILLER#", "<source_name>")
+                    .replaceAll("#KILLED#", "<target_name>");
 
             List<String> mechanics = toConfig.getStringList(to);
 

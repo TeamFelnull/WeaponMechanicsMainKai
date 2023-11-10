@@ -6,7 +6,7 @@ import me.deecaad.core.file.SerializeData;
 import me.deecaad.core.file.SerializerException;
 import me.deecaad.core.mechanics.CastData;
 import me.deecaad.core.mechanics.Mechanics;
-import me.deecaad.core.placeholder.PlaceholderAPI;
+import me.deecaad.core.utils.AdventureUtil;
 import me.deecaad.core.utils.StringUtil;
 import me.deecaad.weaponmechanics.WeaponMechanics;
 import me.deecaad.weaponmechanics.utils.CustomTag;
@@ -21,10 +21,9 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 import static me.deecaad.weaponmechanics.WeaponMechanics.getConfigurations;
@@ -68,7 +67,7 @@ public class InfoHandler implements IValidator {
      * @param weapon The non-null "inaccurate" weapon-title.
      * @return The non-null valid weapon-title.
      */
-    @Nonnull
+    @NotNull
     public String getWeaponTitle(String weapon) {
 
         // Before checking for similarities, do a startsWith check (since
@@ -175,10 +174,8 @@ public class InfoHandler implements IValidator {
         weaponStack = weaponStack.clone();
         weaponStack.setAmount(amount);
 
-        ItemMeta weaponMeta = weaponStack.getItemMeta();
-        weaponMeta.setDisplayName(PlaceholderAPI.applyPlaceholders(weaponMeta.getDisplayName(), null, weaponStack, weaponTitle, null));
-        //weaponMeta.setLore(PlaceholderAPI.applyPlaceholders(weaponMeta.getLore(), null, weaponStack, weaponTitle, null));
-        weaponStack.setItemMeta(weaponMeta);
+        // Applying placeholders has to be done via adventure, else we lose formatting
+        AdventureUtil.updatePlaceholders(null, weaponStack);
 
         // Apply default skin
         SkinSelector skins = getConfigurations().getObject(weaponTitle + ".Skin", SkinSelector.class);
@@ -230,10 +227,7 @@ public class InfoHandler implements IValidator {
         Player player = isPlayer ? (Player) entity : null;
 
         if (isPlayer) {
-            ItemMeta weaponMeta = weaponStack.getItemMeta();
-            weaponMeta.setDisplayName(PlaceholderAPI.applyPlaceholders(weaponMeta.getDisplayName(), player, weaponStack, weaponTitle, null));
-            //weaponMeta.setLore(PlaceholderAPI.applyPlaceholders(weaponMeta.getLore(), player, weaponStack, weaponTitle, null));
-            weaponStack.setItemMeta(weaponMeta);
+            AdventureUtil.updatePlaceholders(player, weaponStack);
         }
 
         // Apply default skin
@@ -280,33 +274,29 @@ public class InfoHandler implements IValidator {
         if (mainWeaponTitle == null || offWeaponTitle == null) return false;
 
         // Check that main hand weapon allows
-        if (mainWeaponTitle != null) {
-            DualWield mainDualWield = getConfigurations().getObject(mainWeaponTitle + ".Info.Dual_Wield", DualWield.class);
-            if (mainDualWield == null) {
-                // Doesn't allow since its null
-                return true;
-            }
+        DualWield mainDualWield = getConfigurations().getObject(mainWeaponTitle + ".Info.Dual_Wield", DualWield.class);
+        if (mainDualWield == null) {
+            // Doesn't allow since its null
+            return true;
+        }
 
-            // Check if works with off hand weapon
-            if (mainDualWield.denyDualWieldingWith(offWeaponTitle)) {
-                mainDualWield.sendDeniedMessage(checkCause, player, mainWeaponTitle);
-                return true;
-            }
+        // Check if works with off hand weapon
+        if (mainDualWield.denyDualWieldingWith(offWeaponTitle)) {
+            mainDualWield.sendDeniedMessage(checkCause, player, mainWeaponTitle);
+            return true;
         }
 
         // Check that off hand weapon allows
-        if (offWeaponTitle != null) {
-            DualWield offDualWield = getConfigurations().getObject(offWeaponTitle + ".Info.Dual_Wield", DualWield.class);
-            if (offDualWield == null) {
-                // Doesn't allow since its null
-                return true;
-            }
+        DualWield offDualWield = getConfigurations().getObject(offWeaponTitle + ".Info.Dual_Wield", DualWield.class);
+        if (offDualWield == null) {
+            // Doesn't allow since its null
+            return true;
+        }
 
-            // Check if works with main hand weapon
-            if (offDualWield.denyDualWieldingWith(mainWeaponTitle)) {
-                offDualWield.sendDeniedMessage(checkCause, player, offWeaponTitle);
-                return true;
-            }
+        // Check if works with main hand weapon
+        if (offDualWield.denyDualWieldingWith(mainWeaponTitle)) {
+            offDualWield.sendDeniedMessage(checkCause, player, offWeaponTitle);
+            return true;
         }
 
         return false;

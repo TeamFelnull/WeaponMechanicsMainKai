@@ -1,7 +1,7 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 description = "Library plugin for WeaponMechanics"
-version = "2.5.0"
+version = "3.1.2"
 
 plugins {
     `maven-publish`
@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":Core_1_18_R2", "reobf"))
     implementation(project(":Core_1_19_R3", "reobf"))
     implementation(project(":Core_1_20_R1", "reobf"))
+    implementation(project(":Core_1_20_R2", "reobf"))
 }
 
 tasks {
@@ -46,7 +47,7 @@ bukkit {
 
     load = net.minecrell.pluginyml.bukkit.BukkitPluginDescription.PluginLoadOrder.STARTUP
     authors = listOf("DeeCaaD", "CJCrafter")
-    loadBefore = listOf("WorldEdit", "WorldGuard", "PlaceholderAPI", "MythicMobs")
+    loadBefore = listOf("WorldEdit", "WorldGuard", "PlaceholderAPI", "MythicMobs", "Geyser-Spigot")
 }
 
 tasks.named<ShadowJar>("shadowJar") {
@@ -70,6 +71,7 @@ tasks.named<ShadowJar>("shadowJar") {
         include(project(":Core_1_18_R2"))
         include(project(":Core_1_19_R3"))
         include(project(":Core_1_20_R1"))
+        include(project(":Core_1_20_R2"))
 
         relocate ("net.kyori", "me.deecaad.core.lib") {
             include(dependency("net.kyori::"))

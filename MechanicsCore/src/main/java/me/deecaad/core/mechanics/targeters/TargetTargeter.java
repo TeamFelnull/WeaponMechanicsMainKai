@@ -6,7 +6,7 @@ import me.deecaad.core.mechanics.CastData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.util.Iterator;
 
 public class TargetTargeter extends Targeter {
 
@@ -22,8 +22,16 @@ public class TargetTargeter extends Targeter {
     }
 
     @Override
-    protected List<CastData> getTargets0(CastData cast) {
-        return List.of(cast.clone());
+    protected Iterator<CastData> getTargets0(CastData cast) {
+
+        // Seems redundant, but actually SUPER important. Remember that the 'cast'
+        // variable is reused by all mechanics. So we need to update the target.
+        if (cast.getTarget() != null)
+            cast.setTargetEntity(cast.getTarget());
+        if (cast.hasTargetLocation())
+            cast.setTargetLocation(cast.getTargetLocationSupplier());
+
+        return new SingleIterator<>(cast);
     }
 
     @Override
@@ -39,7 +47,7 @@ public class TargetTargeter extends Targeter {
 
     @NotNull
     @Override
-    public Targeter serialize(SerializeData data) throws SerializerException {
+    public Targeter serialize(@NotNull SerializeData data) throws SerializerException {
         return applyParentArgs(data, new TargetTargeter());
     }
 }

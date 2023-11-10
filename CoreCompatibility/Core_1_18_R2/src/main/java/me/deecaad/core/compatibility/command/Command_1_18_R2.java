@@ -37,6 +37,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ColumnPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.pattern.BlockInWorld;
 import net.minecraft.world.phys.Vec2;
@@ -76,7 +77,7 @@ import java.util.stream.Collectors;
 public class Command_1_18_R2 implements CommandCompatibility {
 
     public static final MinecraftServer SERVER = ((CraftServer) Bukkit.getServer()).getServer();
-    private static final DynamicCommandExceptionType ERROR_BIOME_INVALID = new DynamicCommandExceptionType(arg -> new TranslatableComponent("commands.locate.biome.invalid", arg));;
+    private static final DynamicCommandExceptionType ERROR_BIOME_INVALID = new DynamicCommandExceptionType(arg -> new TranslatableComponent("commands.locate.biome.invalid", arg));
 
     @Override
     public SimpleCommandMap getCommandMap() {
@@ -577,7 +578,8 @@ public class Command_1_18_R2 implements CommandCompatibility {
     @Override
     public SoundHolder getSound(CommandContext<Object> context, String key) {
         ResourceLocation location = ResourceLocationArgument.getId(cast(context), key);
-        Sound bukkit = CraftSound.getBukkit(Registry.SOUND_EVENT.get(location));
+        SoundEvent sound = Registry.SOUND_EVENT.get(location);
+        Sound bukkit = sound == null ? null : CraftSound.getBukkit(sound);
         return new SoundHolder(bukkit, new NamespacedKey(location.getNamespace(), location.getPath()));
     }
 

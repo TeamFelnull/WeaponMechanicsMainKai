@@ -39,6 +39,15 @@ repositories {
         url = uri("https://mvn.lumine.io/repository/maven-public/")
     }
 
+    maven(url = "https://s01.oss.sonatype.org/content/repositories/snapshots/") {
+        name = "sonatype-oss-snapshots"
+    }
+
+    maven {
+        url = uri("https://repo.opencollab.dev/main/")
+    }
+
+
     //maven {
     //    url = uri("https://repo.dmulloy2.net/repository/public/")
     //}

@@ -20,8 +20,7 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
-import java.util.stream.Collectors;
+import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class BlockDamage implements Serializer<BlockDamage> {
@@ -29,7 +28,7 @@ public class BlockDamage implements Serializer<BlockDamage> {
     /**
      * Determines whether a block is broken, cracked, or skip damage.
      */
-    public enum BreakMode {CANCEL, BREAK, CRACK}
+    public enum BreakMode { CANCEL, BREAK, CRACK }
 
     /**
      * Holds data from config for a material.
@@ -140,10 +139,6 @@ public class BlockDamage implements Serializer<BlockDamage> {
     public BreakMode getBreakMode(Material material) {
         DamageConfig config = blocks.get(material);
         return config == null ? defaultMode : config.mode;
-    }
-
-    public List<Block> filterBreakbleBlocks(List<Block> blocks) {
-        return blocks.stream().filter(block -> getBreakMode(block.getType()) == BreakMode.BREAK).collect(Collectors.toList());
     }
 
     public int getDurability(Block block) {
@@ -300,13 +295,13 @@ public class BlockDamage implements Serializer<BlockDamage> {
     }
 
     @Override
-    public boolean letPassThrough(String key) {
+    public boolean letPassThrough(@NotNull String key) {
         return key.endsWith("Spawn_Falling_Block_Chance") || key.endsWith("Regenerate_After_Ticks");
     }
 
     @Override
     @NotNull
-    public BlockDamage serialize(SerializeData data) throws SerializerException {
+    public BlockDamage serialize(@NotNull SerializeData data) throws SerializerException {
 
         // Added November 1st, 2022 to detect out-dated configurations
         if (data.has("Block_List") || data.has("Shots_To_Break_Blocks")) {

@@ -55,12 +55,12 @@ public class LeapMechanic extends Mechanic {
 
     @Override
     public @Nullable String getWikiLink() {
-        return "https://github.com/WeaponMechanics/MechanicsMain/wiki/LeapMechanic";
+        return "https://cjcrafter.gitbook.io/mechanics/mechanics/leap";
     }
 
     @NotNull
     @Override
-    public Mechanic serialize(SerializeData data) throws SerializerException {
+    public Mechanic serialize(@NotNull SerializeData data) throws SerializerException {
         double speed = data.of("Speed").assertExists().getDouble();
         double verticalMultiplier = data.of("Vertical_Multiplier").getDouble(1.0);
 
