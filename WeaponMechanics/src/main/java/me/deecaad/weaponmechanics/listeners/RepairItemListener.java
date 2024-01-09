@@ -243,8 +243,10 @@ public class RepairItemListener implements Listener {
         // Not a valid repair item... setAmount(1) is required to get by key in map.
         int availableItems = repairItem.getAmount();
         repairItem.setAmount(1);
-        if (!customDurability.getRepairItems().containsKey(repairItem))
+        if (!customDurability.getRepairItems().containsKey(repairItem)) {
+            repairItem.setAmount(availableItems);
             return false;
+        }
 
         // Calculate how many items can possibly be consumed in order to
         // max out the weapons durability.
@@ -412,7 +414,7 @@ public class RepairItemListener implements Listener {
 
             int totalDurability = data.of("Total_Durability").assertPositive().assertExists().getInt();
             int overrideMaxDurabilityLoss = data.of("Override_Max_Durability_Loss").assertPositive().getInt(-1);
-            boolean blacklist = data.of("Blacklist").get(false);
+            boolean blacklist = data.of("Blacklist").getBool(false);
             Set<String> weapons = data.ofList("Weapons").addArgument(String.class, true).assertList().stream().map(arr -> arr[0]).collect(Collectors.toSet());
             Set<String> armors = data.ofList("Armors").addArgument(String.class, true).assertList().stream().map(arr -> arr[0]).collect(Collectors.toSet());
 
@@ -421,7 +423,7 @@ public class RepairItemListener implements Listener {
             ItemStack item = new ItemSerializer().serializeWithTags(data.move("Item"), tags);
 
             Mechanics breakMechanics = data.of("Break_Mechanics").serialize(Mechanics.class);
-            boolean consumeOnUse = data.of("Consume_On_Use").get(false);
+            boolean consumeOnUse = data.of("Consume_On_Use").getBool(false);
 
             return new RepairKit(item, totalDurability, overrideMaxDurabilityLoss, blacklist, weapons, armors, breakMechanics, consumeOnUse);
         }

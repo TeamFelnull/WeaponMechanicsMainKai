@@ -1,8 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
 
-description = "A New Age of Weapons in Minecraft"
-version = "3.1.1"
 
 plugins {
     id("me.deecaad.java-conventions")
@@ -12,6 +10,10 @@ plugins {
 
 configurations {
     compileClasspath.get().extendsFrom(create("shadeOnly"))
+}
+
+repositories {
+    maven(url = "https://repo.jeff-media.com/public/")
 }
 
 dependencies {
@@ -28,6 +30,7 @@ dependencies {
     implementation(project(":Weapon_1_19_R3", "reobf"))
     implementation(project(":Weapon_1_20_R1", "reobf"))
     implementation(project(":Weapon_1_20_R2", "reobf"))
+    implementation(project(":Weapon_1_20_R3", "reobf"))
 }
 
 tasks {
@@ -39,13 +42,16 @@ tasks {
 
 // See https://github.com/Minecrell/plugin-yml
 bukkit {
+    val weaponMechanicsVersion = findProperty("weaponMechanicsVersion") as? String ?: throw IllegalArgumentException("weaponMechanicsVersion was null")
+
     main = "me.deecaad.weaponmechanics.WeaponMechanicsLoader"
     name = "WeaponMechanics" // Since we don't want to use "BuildWeaponMechanics"
+    version = weaponMechanicsVersion
     apiVersion = "1.13"
 
     authors = listOf("DeeCaaD", "CJCrafter")
     depend = listOf("ProtocolLib") // TODO switch to soft depends and add auto installer
-    softDepend = listOf("MechanicsCore", "MythicMobs", "CrackShot", "CrackShotPlus", "Vivecraft-Spigot-Extensions")
+    softDepend = listOf("MechanicsCore", "MythicMobs", "CrackShot", "CrackShotPlus", "VivecraftSpigot")
 
     permissions {
         register("weaponmechanics.use.*") {
@@ -56,8 +62,10 @@ bukkit {
 }
 
 tasks.named<ShadowJar>("shadowJar") {
+    val weaponMechanicsVersion = findProperty("weaponMechanicsVersion") as? String ?: throw IllegalArgumentException("weaponMechanicsVersion was null")
+
     destinationDirectory.set(file("../build"))
-    archiveFileName.set("WeaponMechanics-${version}.jar")
+    archiveFileName.set("WeaponMechanics-${weaponMechanicsVersion}.jar")
     configurations = listOf(project.configurations["shadeOnly"], project.configurations["runtimeClasspath"])
 
     dependencies {
@@ -74,16 +82,21 @@ tasks.named<ShadowJar>("shadowJar") {
         include(project(":Weapon_1_19_R3"))
         include(project(":Weapon_1_20_R1"))
         include(project(":Weapon_1_20_R2"))
-
-        relocate("me.cjcrafter.auto", "me.deecaad.weaponmechanics.lib.auto") {
-            include(dependency("me.cjcrafter:mechanicsautodownload"))
-        }
+        include(project(":Weapon_1_20_R3"))
 
         relocate("org.bstats", "me.deecaad.weaponmechanics.lib.bstats") {
             include(dependency("org.bstats:"))
         }
+        relocate("com.jeff_media", "me.deecaad.weaponmechanics.lib") {
+            include(dependency("com.jeff_media:"))
+        }
+        relocate("com.google.gson", "me.deecaad.weaponmechanics.lib.gson") {
+            include(dependency("com.google.code.gson:"))
+        }
     }
 
+    // This doesn't actually include any dependencies, this relocates all references
+    // to the mechanics core lib.
     relocate("net.kyori", "me.deecaad.core.lib")
 
     doFirst {
@@ -93,30 +106,4 @@ tasks.named<ShadowJar>("shadowJar") {
 
 tasks.named("assemble").configure {
     dependsOn("shadowJar")
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/WeaponMechanics/MechanicsMain")
-            credentials {
-                username = findProperty("user").toString()
-                password = findProperty("pass").toString()
-            }
-        }
-    }
-    publications {
-        create<MavenPublication>("weaponPublication") {
-            artifact(tasks.named("shadowJar")) {
-                classifier = null
-            }
-
-            pom {
-                groupId = "me.deecaad"
-                artifactId = "weaponmechanics" // MUST be lowercase
-                packaging = "jar"
-            }
-        }
-    }
 }

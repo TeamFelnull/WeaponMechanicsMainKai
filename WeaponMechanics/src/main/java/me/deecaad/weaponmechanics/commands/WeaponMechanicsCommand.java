@@ -69,7 +69,7 @@ import static org.bukkit.ChatColor.*;
 @SuppressWarnings("unchecked")
 public class WeaponMechanicsCommand {
 
-    public static String WIKI = "https://github.com/WeaponMechanics/MechanicsMain/wiki";
+    public static String WIKI = "https://cjcrafter.gitbook.io/weaponmechanics/";
     public static char SYM = '\u27A2';
 
     public static Function<CommandData, Tooltip[]> WEAPON_SUGGESTIONS = (data) -> {
@@ -120,7 +120,8 @@ public class WeaponMechanicsCommand {
                 .with("slot", MapArgumentType.INT(IntStream.rangeClosed(0, 40).boxed().toArray(Integer[]::new)))
                 .with("durability", MapArgumentType.INT(500, 1000))
                 .with("maxDurability", MapArgumentType.INT(500, 1000))
-                .with("attachments", MapArgumentType.LIST("[]"));
+                .with("attachments", MapArgumentType.LIST("[]"))
+                .with("skin", MapArgumentType.STRING("default"));
 
         CommandBuilder command = new CommandBuilder("wm")
                 .withAliases("weaponmechanics")
@@ -426,6 +427,9 @@ public class WeaponMechanicsCommand {
             return;
         }
 
+        // Used by the WeaponGenerateEvent
+        data.put("sender", sender);
+
         InfoHandler info = WeaponMechanics.getWeaponHandler().getInfoHandler();
         List<Entity> entitiesGiven = new ArrayList<>();
         Set<String> weaponsGiven = new HashSet<>();
@@ -660,7 +664,7 @@ public class WeaponMechanicsCommand {
                 .withElementCharStyle(gold)
                 .withFillChar('=')
                 .withFillCharStyle(Style.style(NamedTextColor.GRAY, TextDecoration.STRIKETHROUGH))
-                .withHeader("Weapons [Page " + requestedPage + "/" + (weapons.size() / (3 * 8) + 1) + "]")
+                .withHeader("Weapons [Page " + requestedPage + "/" + ((weapons.size() - 1) / (3 * 8) + 1) + "]")
                 .withHeaderStyle(gold)
                 .withElementStyle(gray)
                 .withLeft(text().content("«").style(gold)
@@ -690,10 +694,8 @@ public class WeaponMechanicsCommand {
     }
 
     public static void wiki(CommandSender sender) {
-        List<String> pages = Arrays.asList("Information", "Skins", "Shooting", "Scoping",
-                "Reloading", "Projectile", "Damage", "Explosion", "Firearms", "Melee",
-                "Addons", "API", "Commands and Permissions", "References", "Placeholders",
-                "General");
+        List<String> pages = Arrays.asList("Info", "Shoot", "Scope", "Reload",
+                "Skin", "Projectile", "Explosion", "Damage", "Firearm_Action", "Melee");
 
         Style gold = Style.style(NamedTextColor.GOLD);
         Style gray = Style.style(NamedTextColor.GRAY);
@@ -704,7 +706,7 @@ public class WeaponMechanicsCommand {
                 .withElementStyle(gray)
                 .withAttemptSinglePixelFix()
                 .withSupplier(i -> i >= pages.size() ? empty() : text().content(pages.get(i).toUpperCase(Locale.ROOT))
-                        .clickEvent(ClickEvent.openUrl(WIKI + '/' + pages.get(i)))
+                        .clickEvent(ClickEvent.openUrl(WIKI + "/weapon-modules/" + pages.get(i).toLowerCase(Locale.ROOT)))
                         .hoverEvent(text("Click to go to the wiki", gray))
                         .build())
                 .build();

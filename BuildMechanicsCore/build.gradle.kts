@@ -1,10 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-description = "Library plugin for WeaponMechanics"
-version = "3.1.2"
-
 plugins {
-    `maven-publish`
     id("me.deecaad.java-conventions")
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("net.minecrell.plugin-yml.bukkit") version "0.5.1"
@@ -30,6 +26,7 @@ dependencies {
     implementation(project(":Core_1_19_R3", "reobf"))
     implementation(project(":Core_1_20_R1", "reobf"))
     implementation(project(":Core_1_20_R2", "reobf"))
+    implementation(project(":Core_1_20_R3", "reobf"))
 }
 
 tasks {
@@ -41,8 +38,11 @@ tasks {
 
 // See https://github.com/Minecrell/plugin-yml
 bukkit {
+    val mechanicsCoreVersion = findProperty("mechanicsCoreVersion") as? String ?: throw IllegalArgumentException("weaponMechanicsVersion was null")
+
     main = "me.deecaad.core.MechanicsCore"
-    name = "MechanicsCore" // Since we don't want to use "BuildMechanicsCore"
+    name = "MechanicsCore" // Since we don't want to use "BuildMechanicsCore"\
+    version = mechanicsCoreVersion
     apiVersion = "1.13"
 
     load = net.minecrell.pluginyml.bukkit.BukkitPluginDescription.PluginLoadOrder.STARTUP
@@ -51,9 +51,10 @@ bukkit {
 }
 
 tasks.named<ShadowJar>("shadowJar") {
+    val mechanicsCoreVersion = findProperty("mechanicsCoreVersion") as? String ?: throw IllegalArgumentException("weaponMechanicsVersion was null")
 
     destinationDirectory.set(file("../build"))
-    archiveFileName.set("MechanicsCore-${version}.jar")
+    archiveFileName.set("MechanicsCore-$mechanicsCoreVersion.jar")
     configurations = listOf(project.configurations["shadeOnly"], project.configurations["runtimeClasspath"])
 
     dependencies {
@@ -72,6 +73,7 @@ tasks.named<ShadowJar>("shadowJar") {
         include(project(":Core_1_19_R3"))
         include(project(":Core_1_20_R1"))
         include(project(":Core_1_20_R2"))
+        include(project(":Core_1_20_R3"))
 
         relocate ("net.kyori", "me.deecaad.core.lib") {
             include(dependency("net.kyori::"))
@@ -93,30 +95,4 @@ tasks.named<ShadowJar>("shadowJar") {
 
 tasks.named("assemble").configure {
     dependsOn("shadowJar")
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/WeaponMechanics/MechanicsMain")
-            credentials {
-                username = findProperty("user").toString()
-                password = findProperty("pass").toString()
-            }
-        }
-    }
-    publications {
-        create<MavenPublication>("corePublication") {
-            artifact(tasks.named("shadowJar")) {
-                classifier = null
-            }
-
-            pom {
-                groupId = "me.deecaad"
-                artifactId = "mechanicscore" // MUST be lowercase
-                packaging = "jar"
-            }
-        }
-    }
 }
